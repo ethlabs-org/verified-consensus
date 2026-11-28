@@ -45,15 +45,6 @@ private theorem createAtt_fin {n : Nat} {Λ Λ' : FG.Record} {v : Fin n}
   obtain ⟨-, -, -, -, hf, -⟩ := FG.Record.createAtt_some h
   exact hf
 
-/-- The newest-pair fold returns its start or a member of the list. -/
-private theorem foldl_newest_mem {l : List (Nat × Nat)} {acc : Option (Nat × Nat)}
-    {p : Nat × Nat}
-    (h : l.foldl (fun acc p => match acc with
-      | none => some p
-      | some r => if r.1 < p.1 then some p else some r) acc = some p) :
-    acc = some p ∨ p ∈ l := by
-  exact FG.Record.foldl_newest_mem_or_initial h
-
 /-- One accepted block: its justification is the parent's, or the parent's entry at the parent's
 height; its pending pairs are the parent's or the parent's `(h, T_h)`. -/
 private theorem step_pending {gp : FG.FGParams} {σ σ' : FG.ChainState gp.n}
@@ -184,7 +175,7 @@ theorem signed_fin_pair_entry_of_run {ini} (hrun : GoldilocksRun proposer dg H t
     obtain ⟨rfl, rfl⟩ := hfp
     obtain ⟨Z, hZ, hZE, hZr, hZh, hZT⟩ := hJ hb.1
     exact ⟨Z, hZ, E, hE, hET.symm.trans hT.symm, hZE, hZr, hZh, hZT⟩
-  · rcases foldl_newest_mem hfp.symm with h' | h'
+  · rcases FG.Record.foldl_newest_mem_or_initial hfp.symm with h' | h'
     · cases h'
     · obtain ⟨Z, hZ, hZE, hZr, hZh, hZT⟩ := hpend _ (List.mem_filter.1 h').1
       exact ⟨Z, hZ, E, hE, hET.symm.trans hT.symm, hZE, hZr, hZh, hZT⟩

@@ -71,15 +71,6 @@ theorem pending_justified (hr : st.Reachable acp₀) {W : NodeBlock P ACP} (hW :
     · exact ih p hp
     · exact ⟨W', hYW.2.1, rfl, rfl⟩
 
-/-- The newest-pair fold returns its start or a member of the list. -/
-private theorem foldl_newest_mem {l : List (Nat × Nat)} {acc : Option (Nat × Nat)}
-    {p : Nat × Nat}
-    (h : l.foldl (fun acc p => match acc with
-      | none => some p
-      | some r => if r.1 < p.1 then some p else some r) acc = some p) :
-    acc = some p ∨ p ∈ l := by
-  exact FG.Record.foldl_newest_mem_or_initial h
-
 /-- **A finality pair of a held state is the justification of a held state** (the entry's own
 justification at an entry whose previous height is justified, or a pending pair). -/
 theorem finalityPair_justified (hr : st.Reachable acp₀) {W : NodeBlock P ACP}
@@ -90,7 +81,7 @@ theorem finalityPair_justified (hr : st.Reachable acp₀) {W : NodeBlock P ACP}
   split_ifs at hp
   · cases hp
     exact ⟨W, hW, rfl, rfl⟩
-  · rcases foldl_newest_mem hp with h' | h'
+  · rcases FG.Record.foldl_newest_mem_or_initial hp with h' | h'
     · cases h'
     · exact pending_justified hr hW p (List.mem_filter.1 h').1
 
