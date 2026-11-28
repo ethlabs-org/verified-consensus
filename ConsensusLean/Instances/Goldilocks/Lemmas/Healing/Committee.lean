@@ -20,7 +20,7 @@ facts of a slot dictionary `K` in the form the growing proofs use,
   counted declared head vote is backed in the read point's pool);
 * `mayVote_iff_of_facts`: an honest node may vote in exactly its committees' slots (the gate);
 * `cs2_of_twoK`: CS2 against `committeeSize`;
-* `faultBoundK_of_twoK`: CS at a slot after the slot of `ḡ`, read at a time whose previous slot
+* `faultBoundK_of_awake`: CS at a slot after the slot of `ḡ`, read at a time whose previous slot
   starts at or after `ḡ`, from CS2, awake honest nodes and no restart after `ḡ`. -/
 
 namespace Consensus.Goldilocks.Healing
@@ -120,36 +120,6 @@ theorem slot_gbar_lt_of_cutZ_le {g : Time} {j : Nat} (h : cutZ sp.toParams g ≤
 The committee bounds hold for the slots after the slot of `ḡ`, so the AC base of the static
 healing proofs is read from `g' = t_{slot(ḡ)+1}`, the first slot start strictly after `ḡ`: there
 `gbar g' ≤ t_s` is exactly `slot(ḡ) + 1 ≤ s`. -/
-
-/-- `ḡ < g'`. -/
-theorem gbar_lt_slotAfter (g : Time) : gbar g < sp.ts (sp.slot (gbar g) + 1 : Nat) := by
-  by_contra h
-  have := (AC.ts_le_iff_le_slot sp (AC.gbar_nonneg g) _).1 (not_lt.1 h)
-  push_cast at this
-  omega
-
-/-- `g' ≤ ḡ + 4Δ`. -/
-theorem slotAfter_le (g : Time) : sp.ts (sp.slot (gbar g) + 1 : Nat) ≤ gbar g + 4 * sp.Δ := by
-  have h := (AC.ts_le_iff_le_slot sp (AC.gbar_nonneg g) (sp.slot (gbar g) : Nat)).2 le_rfl
-  have : sp.ts (sp.slot (gbar g) + 1 : Nat) = sp.ts (sp.slot (gbar g) : Nat) + 4 * sp.Δ := by
-    simp only [ACParams.ts]; push_cast; ring
-  linarith
-
-/-- `gbar g' = g'`. -/
-theorem gbar_slotAfter (g : Time) :
-    gbar (sp.ts (sp.slot (gbar g) + 1 : Nat)) = sp.ts (sp.slot (gbar g) + 1 : Nat) :=
-  max_eq_left ((AC.gbar_nonneg g).trans (gbar_lt_slotAfter g).le)
-
-/-- `c_z = g' + 8Δ`. -/
-theorem cutZ_eq_slotAfter (g : Time) :
-    cutZ sp.toParams g = sp.ts (sp.slot (gbar g) + 1 : Nat) + 8 * sp.Δ := by
-  rw [cutZ_eq sp g]; simp only [ACParams.ts]; push_cast; ring
-
-/-- A slot whose start is at or after `g'` is after the slot of `ḡ`. -/
-theorem slot_gbar_lt_of_slotAfter_le {g : Time} {s : Nat}
-    (h : sp.ts (sp.slot (gbar g) + 1 : Nat) ≤ sp.ts s) : sp.slot (gbar g) + 1 ≤ s := by
-  have := (AC.ts_le_iff sp).1 h
-  omega
 
 /-- **Catch-up from a later time**: under `Sync` from `a` (acceptance relay), with every honest
 restart at or before `a' ≥ a` within the horizon, a catch-up by `a + κ` (`κ > Δ`) of the acceptances

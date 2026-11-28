@@ -71,15 +71,6 @@ theorem pending_justified (hr : st.Reachable acp₀) {W : NodeBlock P ACP} (hW :
     · exact ih p hp
     · exact ⟨W', hYW.2.1, rfl, rfl⟩
 
-/-- The newest-pair fold returns its start or a member of the list. -/
-private theorem foldl_newest_mem {l : List (Nat × Nat)} {acc : Option (Nat × Nat)}
-    {p : Nat × Nat}
-    (h : l.foldl (fun acc p => match acc with
-      | none => some p
-      | some r => if r.1 < p.1 then some p else some r) acc = some p) :
-    acc = some p ∨ p ∈ l := by
-  exact FG.Record.foldl_newest_mem_or_initial h
-
 /-- **A finality pair of a held state is the justification of a held state** (the entry's own
 justification at an entry whose previous height is justified, or a pending pair). -/
 theorem finalityPair_justified (hr : st.Reachable acp₀) {W : NodeBlock P ACP}
@@ -90,20 +81,9 @@ theorem finalityPair_justified (hr : st.Reachable acp₀) {W : NodeBlock P ACP}
   split_ifs at hp
   · cases hp
     exact ⟨W, hW, rfl, rfl⟩
-  · rcases foldl_newest_mem hp with h' | h'
+  · rcases FG.Record.foldl_newest_mem_or_initial hp with h' | h'
     · cases h'
     · exact pending_justified hr hW p (List.mem_filter.1 h').1
-
-/-- The entry state of any root is the state of a held block. -/
-theorem entry_state_held (hr : st.Reachable acp₀) (r : Nat) :
-    ∃ W ∈ st.tree, st.σ (st.σ r).Th = st.σ W.root := by
-  rcases hs : st.blocks r with _ | X
-  · have hg : (st.σ r).Th = P.genesisRoot := by rw [Store.σ_of_blocks_none hr hs]; rfl
-    exact ⟨_, Store.genesis_mem hr, by rw [hg]; rfl⟩
-  · have hXr : X.root = r := Goldilocks.Store.Reachable.blocks_root hr hs
-    have hX : X ∈ st.tree := by change st.blocks X.root = some X; rw [hXr]; exact hs
-    obtain ⟨⟨E, hE, hEr, -⟩, -⟩ := Goldilocks.Store.entry_state_of_source _ _ _ _ hr X hX
-    exact ⟨E, hE, by rw [hEr, hXr]⟩
 
 /-- State heights are at least `1`. -/
 theorem one_le_h (hr : st.Reachable acp₀) {B : NodeBlock P ACP} (hB : B ∈ st.tree) :
@@ -112,34 +92,6 @@ theorem one_le_h (hr : st.Reachable acp₀) {B : NodeBlock P ACP} (hB : B ∈ st
   exact (FG.chain_invariants P.fg _ _ hc).1
 
 end Store
-
-/-! ## The client over a run -/
-
-section AnyAC
-
-variable {P : Params} {A : NodeAC P} {proposer : Nat → Fin P.n}
-  {dg : Digest (List (FG.Att P.n)) A.Payload} {H : Set (Fin P.n)} {sg : A.Msg → Fin P.n}
-  {tr : RunTrace A} {ini : Fin P.n → A.State}
-
-/-- **A finality pair `(h, X)` signed by an honest node is a justification it holds**: the node
-holds, from the signing on, a block whose state justifies `X` at `h`. -/
-theorem signed_fin_justified (hrun : Node.LocalRun proposer dg H sg tr ini) {y : Fin P.n}
-    (hy : y ∈ H)
-    {k : Nat} {att : FG.Att P.n} (hs : tr.SignAt y k att) {h X : Nat}
-    (hfin : att.fin = some (h, X)) :
-    ∃ B ∈ (tr.state y k).fg.tree, ((tr.state y k).fg.σ B.root).hj = h ∧
-      ((tr.state y k).fg.σ B.root).J = X := by
-  obtain ⟨src, hc⟩ := hs
-  have hcl := (hrun.cutLaw y hy k _ hc).1
-  have hr := Compose.fg_reachable hrun hy k
-  change (tr.state y k).record.createAtt y ((tr.state y k).fg.σ
-    ((tr.state y k).fg.σ src.root).Th) = some (att, _) at hcl
-  obtain ⟨-, -, -, -, hfp, -⟩ := FG.Record.createAtt_some hcl
-  obtain ⟨W, hW, hWσ⟩ := Store.entry_state_held hr src.root
-  rw [hWσ, hfin] at hfp
-  exact Store.finalityPair_justified hr hW hfp.symm
-
-end AnyAC
 
 variable {sp : ACParams}
   {proposer : Nat → Fin sp.n}

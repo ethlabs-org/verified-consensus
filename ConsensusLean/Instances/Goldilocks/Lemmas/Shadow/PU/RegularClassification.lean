@@ -27,7 +27,9 @@ import ConsensusLean.Instances.Goldilocks.Lemmas.Compose.Sleepy.FrameBase
 import ConsensusLean.Instances.Goldilocks.Lemmas.Compose.Persist.Vote
 import ConsensusLean.Instances.Goldilocks.Lemmas.AC.Basic
 import ConsensusLean.Instances.Goldilocks.Lemmas.Growing.AC.UpTo
-import ConsensusLean.Instances.Goldilocks.Lemmas.Healing.AC.H2Batch
+import ConsensusLean.Instances.Goldilocks.Lemmas.Healing.AC.H2Carry
+import ConsensusLean.Instances.Goldilocks.Lemmas.Healing.AC.Trivial
+import ConsensusLean.Instances.Goldilocks.Lemmas.AC.Steps.Writer
 import ConsensusLean.Instances.Goldilocks.Lemmas.Healing.AC.ResultAnc
 import ConsensusLean.Instances.Goldilocks.Lemmas.Healing.PreAdvance
 import ConsensusLean.Instances.Goldilocks.Lemmas.Growing.Sleepy.Node.Lift
@@ -54,7 +56,7 @@ to a top contest. In particular, leaf 9 concerns reports, not arbitrary lock ori
 The existing early-witness argument admits a different geometric route. At each reader,
 keep Q viable and establish F ⪯ Q. Totality of D ⪯ Q and F ⪯ Q then puts D below F,
 or puts D on the viable path rooted at F. The second case is precisely the input used
-by `Healing.witness_frame_at` (WitnessFamily); no ancestry J ⪯ D is required.
+by `Healing.witness_frame_of_held` (WitnessFamily); no ancestry J ⪯ D is required.
 
 The theorem below proves that geometric step. Its coherent ambient tree is an explicit
 premise, not inferred from a stock run. Instantiation over a shadow run still requires

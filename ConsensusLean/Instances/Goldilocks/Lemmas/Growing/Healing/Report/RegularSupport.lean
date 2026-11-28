@@ -2,7 +2,9 @@ module
 public import ConsensusLean.Instances.Goldilocks.Lemmas.Growing.Obligations.Healthy.PrefixBase
 public import ConsensusLean.Instances.Goldilocks.Lemmas.Growing.Sleepy.Node.Lift
 import ConsensusLean.Instances.Goldilocks.Lemmas.Growing.AC.UpTo
-import ConsensusLean.Instances.Goldilocks.Lemmas.Healing.AC.H2Batch
+import ConsensusLean.Instances.Goldilocks.Lemmas.Healing.AC.H2Carry
+import ConsensusLean.Instances.Goldilocks.Lemmas.Healing.AC.Trivial
+import ConsensusLean.Instances.Goldilocks.Lemmas.AC.Steps.Writer
 import ConsensusLean.Instances.Goldilocks.Lemmas.Healing.AC.ResultAnc
 import ConsensusLean.Instances.Goldilocks.Lemmas.Compose.Sleepy.Compare
 import ConsensusLean.Lemmas.Tactic.Linarith
@@ -120,17 +122,6 @@ theorem faultBoundK_of_service_at {K : AC.CommitteeDict sp.n} {g b : Time}
     exact Set.ncard_inter_add_ncard_sdiff_eq_ncard _ _ (Set.toFinite _)
   unfold AC.FaultBoundK
   exact lt_of_lt_of_le (by omega) (Set.ncard_le_ncard hsub)
-
-/-- The committee fault bound at `t` holds on every prefix through `d ≥ t`: the awake and joined
-nodes at `t` read the same calls there. -/
-theorem faultBoundK_upTo {K : AC.CommitteeDict sp.n} {s : Nat} {H' : Set (Fin sp.n)}
-    {t d : Time} (htd : t ≤ d) (h : AC.FaultBoundK K s tr.projAC H' t) :
-    AC.FaultBoundK K s (tr.projAC.upTo d) H' t := by
-  unfold AC.FaultBoundK at h ⊢
-  refine lt_of_lt_of_le h (Set.ncard_le_ncard ?_)
-  rintro y ⟨hyK, hy, hw, hj⟩
-  exact ⟨hyK, hy, (Trace.upTo_awake _ y t).mpr ⟨hw, htd⟩,
-    fun k hk hkt => hj k ((ACTrace.upTo_restartAt (A := AC.goldilocksAC sp _)).mp hk).2 hkt⟩
 
 end Consensus.Goldilocks.Healing.Growing.KernelProof
 
