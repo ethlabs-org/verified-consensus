@@ -28,8 +28,9 @@ variable {FGP : Type} {sp : ACParams}
 
 /-! ## Locks that sit below others -/
 
-/-- `add_locks` with new locks: the new locks are on the blocks of `N`'s entries. -/
-private theorem FromP.of_addLocks {U : Set (Blk sp.n FGP)} (hU : Coherent U) {Φ : Frm sp.n FGP}
+/-- `add_locks` with new locks: the new locks are stored on the viable ancestors of the blocks of
+`N`'s entries. -/
+theorem FromP.of_addLocks {U : Set (Blk sp.n FGP)} (hU : Coherent U) {Φ : Frm sp.n FGP}
     (hΦ : FrameOK Φ) (hΦU : Φ.tree ⊆ U) {L : Set Lock} {t : Time} {s : Nat}
     {N : Set (Nat × Bool × Nat)} {New : Nat → Bool → Blk sp.n FGP → Prop} {L₀ : Set Lock}
       (hL : L₀ = L)
@@ -67,7 +68,9 @@ theorem blockReceipt_locks (A : ACState sp.n) (t : Time) (B : Blk sp.n FGP) :
 
 variable {U : Set (Blk sp.n FGP)} {Φ : Frm sp.n FGP}
 
-private theorem FromP.of_optimistic (hU : Coherent U) (hΦ : FrameOK Φ) (hΦU : Φ.tree ⊆ U)
+/-- An optimistic confirmation writes only fast locks of the current slot, stored on the viable
+ancestor of its selection. -/
+theorem FromP.of_optimistic (hU : Coherent U) (hΦ : FrameOK Φ) (hΦU : Φ.tree ⊆ U)
     (A : ACState sp.n) (t : Time) :
     FromP U A.locks (optimisticConfirmation sp A Φ t).locks
       (fun s f B => ∃ D ∈ Φ.tree, B = Φ.viableAncestor D ∧
@@ -85,7 +88,8 @@ private theorem FromP.of_optimistic (hU : Coherent U) (hΦ : FrameOK Φ) (hΦU :
     split_ifs at hB
     exact ⟨B, (deepest_mem hB).1.1, rfl, B, (deepest_mem hB).1.1, rfl, rfl, rfl, rfl⟩
 
-private theorem FromP.of_optimistic_admit (hU : Coherent U) (hΦ : FrameOK Φ)
+/-- `FromP.of_optimistic` after admitting a vote, which keeps the locks. -/
+theorem FromP.of_optimistic_admit (hU : Coherent U) (hΦ : FrameOK Φ)
     (hΦU : Φ.tree ⊆ U) {L : Set Lock} (A : ACState sp.n) (hL : A.locks = L) (t : Time)
     (v : Vote sp.n) :
     FromP U L (optimisticConfirmation sp (admitVote sp A t v) Φ t).locks
@@ -95,7 +99,9 @@ private theorem FromP.of_optimistic_admit (hU : Coherent U) (hΦ : FrameOK Φ)
   have := FromP.of_optimistic hU hΦ hΦU (admitVote sp A t v) t
   rwa [admitVote_locks_eq, hL] at this
 
-private theorem FromP.of_tryVote
+/-- `try_vote` moves locks back (its unlock) and writes only the fast locks of its own vote's
+optimistic confirmation. -/
+theorem FromP.of_tryVote
     {L : Set Lock} (hU : Coherent U) (hΦ : FrameOK Φ) (hΦU : Φ.tree ⊆ U)
     (x : Fin sp.n) (A : ACState sp.n) (t : Time)
     (hL : UnlockRel sp A.locks Φ t ((sp.slot t : Int) - 1) (mergedVoteView sp A Φ (sp.slot t)) L) :
@@ -136,8 +142,7 @@ private theorem FromP.of_tryVote
     · rfl
     · exact fun s f B ⟨D, hD, heq, h⟩ => ⟨D, hD, heq, _, List.mem_singleton_self _, h⟩
 
-/-- Confirmation updates attribute new locks to witnesses from the frame.
-Kept for a downstream consumer. -/
+/-- Confirmation updates attribute new locks to witnesses from the frame. -/
 theorem FromP.of_updateConfirmation (hU : Coherent U) (hΦ : FrameOK Φ)
     (hΦU : Φ.tree ⊆ U) (A : ACState sp.n) (t : Time) (s : Nat) :
     FromP U A.locks (updateConfirmationM sp wm A Φ t s).locks
@@ -185,7 +190,9 @@ theorem FromP.of_updateConfirmation (hU : Coherent U) (hΦ : FrameOK Φ)
         imp_congr_right fun _ => imp_congr_right fun hm => ?_
       rw [Function.update_of_ne (ne_of_lt hm)]
 
-private theorem FromP.of_onTick
+/-- `ac_on_tick` writes the locks of its vote (`FromP.of_tryVote`) or of its update
+(`FromP.of_updateConfirmation`). -/
+theorem FromP.of_onTick
     {L : Set Lock} (hU : Coherent U) (hΦ : FrameOK Φ) (hΦU : Φ.tree ⊆ U)
     (x : Fin sp.n) (A : ACState sp.n) (t : Time)
     (hL : UnlockRel sp A.locks Φ t ((sp.slot t : Int) - 1) (mergedVoteView sp A Φ (sp.slot t)) L) :

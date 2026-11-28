@@ -10,9 +10,10 @@ public section
 fast bit, or below a block `B` with `New l'.slot l'.fast B`. Moving locks back keeps `FromP`
 (`FromP.of_movesBack`). Proposal construction unlocks only a working copy, so its stored locks
 are unchanged; reporting also keeps them (`toFG_locks`). The relation
-composes (`FromP.trans`). Shared by the fast-lock provenance (`AC/Steps/Provenance`) and the slow
-and stored slow-lock provenance (`Healing/AC/SlowLock`, `Healing/DrainProvenance`), which add
-their own `New` for the writing functions. -/
+composes (`FromP.trans`). `AC/Steps/Provenance` adds the writing functions (`FromP.of_addLocks`,
+`FromP.of_optimistic`, `FromP.of_tryVote`, `FromP.of_updateConfirmation`, `FromP.of_onTick`), each
+with the most precise `New`; the fast and stored provenances (`AC/Steps/Provenance`,
+`Healing/DrainProvenance`, `Healing/Retention/Provenance`) weaken it with `FromP.mono`. -/
 
 namespace Consensus.Goldilocks.AC
 

@@ -16,8 +16,9 @@ exactly that block (`liveLocks` moves the new lock to its viable ancestor), the 
 only move locks back and keep their slot and fast bit (A0.4 (c)), a restart keeps the locks
 (A0.7), an optimistic confirmation writes only fast locks, and an update writes a lock that is
 not fast only as its slow lock. This is the slow case of the induction of `fast_lock_provenance`
-(`AC/Steps/Provenance`), using `FromP.of_updateConfirmation` for the update and the shared `FromP`
-toolkit (`Lemmas/AC/LockProvenance`), with the stored block of HR.4's
+(`AC/Steps/Provenance`), read through the `FromP` lemmas of its writing functions there
+(`FromP.of_onTick`, `FromP.of_tryVote`, `FromP.of_optimistic`) and the shared `FromP` toolkit
+(`Lemmas/AC/LockProvenance`), with the stored block of HR.4's
 `stored_fast_lock_provenance` (`Retention/Provenance`)
 (every lock image retains its original label).
 `slow_lock_provenance` (`AC/SlowLock`) is its corollary for the raw selection `D`. Over a run at a
@@ -30,92 +31,7 @@ variable {wm : AC.WriteMode}
 
 variable {FGP : Type} {sp : ACParams}
 
-private theorem FromP.of_addLocks {U : Set (Blk sp.n FGP)} (hU : Coherent U) {Φ : Frm sp.n FGP}
-    (hΦ : FrameOK Φ) (hΦU : Φ.tree ⊆ U) {L : Set Lock} {t : Time} {s : Nat}
-    {N : Set (Nat × Bool × Nat)} {New : Nat → Bool → Blk sp.n FGP → Prop} {L₀ : Set Lock}
-      (hL : L₀ = L)
-    (hN : ∀ r f e, (r, f, e) ∈ N → ∃ D ∈ Φ.tree, D.root = r ∧ New s f (Φ.viableAncestor D)) :
-    FromP U L (addLocks sp L₀ Φ t s N) New := by
-  subst hL
-  rw [fromP_iff]
-  rintro l' ⟨l, hl, B, hB, hBr, -, rfl⟩
-  obtain ⟨hvt, hva⟩ := viableAncestor_anc hΦ hB
-  rcases hl with hl | ⟨p, hp, rfl⟩
-  · exact Or.inl ⟨l, hl, rfl, rfl,
-      sitsBelow_iff.2 (Or.inr ⟨_, hΦU hvt, rfl, B, hΦU hB, hBr, hva.mono hΦU⟩)⟩
-  · obtain ⟨D, hD, hDr, hND⟩ := hN p.1 p.2.1 p.2.2 hp
-    obtain rfl : B = D := hU.1 (hΦU hB) (hΦU hD) (hBr.trans hDr.symm)
-    exact Or.inr ⟨_, hND, below_iff.2 ⟨_, hΦU hvt, rfl, .refl⟩⟩
-
-variable {U : Set (Blk sp.n FGP)} {Φ : Frm sp.n FGP}
-
-/-- An optimistic confirmation writes only fast locks. -/
-private theorem FromP.of_optimistic (hU : Coherent U) (hΦ : FrameOK Φ) (hΦU : Φ.tree ⊆ U)
-    (A : ACState sp.n) (t : Time) :
-    FromP U A.locks (optimisticConfirmation sp A Φ t).locks (fun _ f _ => f = true) := by
-  unfold optimisticConfirmation
-  rcases h : optimisticSelect sp A Φ t with _ | B
-  · exact FromP.of_eq rfl
-  · rw [updateLatestConfirmed_keeps_locks]
-    refine FromP.of_addLocks hU hΦ hΦU rfl fun r f e hr => ?_
-    simp only [Set.mem_singleton_iff, Prod.mk.injEq] at hr
-    obtain ⟨rfl, rfl, -⟩ := hr
-    have hB := h
-    unfold optimisticSelect at hB
-    dsimp only at hB
-    split_ifs at hB
-    exact ⟨B, (deepest_mem hB).1.1, rfl, rfl⟩
-
-private theorem FromP.of_tryVote
-    {L : Set Lock} (hU : Coherent U) (hΦ : FrameOK Φ) (hΦU : Φ.tree ⊆ U)
-    (x : Fin sp.n) (A : ACState sp.n) (t : Time)
-    (hL : UnlockRel sp A.locks Φ t ((sp.slot t : Int) - 1) (mergedVoteView sp A Φ (sp.slot t)) L) :
-    FromP U A.locks (tryVoteWithM sp wm x L A Φ t).1.locks (fun _ f _ => f = true) := by
-  have hopt : ∀ (A' : ACState sp.n) (v : Vote sp.n) (L : Set Lock), A'.locks = L →
-      FromP U L (optimisticConfirmation sp (admitVote sp A' t v) Φ t).locks
-        (fun _ f _ => f = true) := fun A' v L hL => by
-    have := FromP.of_optimistic hU hΦ hΦU (admitVote sp A' t v) t
-    rwa [admitVote_locks_eq, hL] at this
-  unfold tryVoteWithM
-  dsimp only
-  split_ifs
-  · exact FromP.of_eq rfl
-  · exact FromP.of_eq rfl
-  · exact FromP.trans hU (FromP.of_movesBack hΦU (hL.movesBack hΦ)) (hopt _ _ _ rfl)
-  · exact hopt _ _ _ rfl
-  · exact FromP.of_movesBack hΦU (hL.movesBack hΦ)
-  · exact FromP.of_eq rfl
-
-/-- The slow lock of width `w` that the update of slot `s` at `(A, Φ, t)` writes on `B` (vetoed
-or not). -/
-private def SlowW (w : Nat) (A : ACState sp.n) (Φ : Frm sp.n FGP) (t : Time) (s : Nat)
-    (B : Blk sp.n FGP) : Prop :=
-  ∃ C, getConfirmation sp A Φ s = some C ∧
-    deepest Φ {X | X ∈ confirmationPath sp Φ C ∧ ¬ conflictsWithLock sp A.locks Φ t X ∧
-      ∀ j : Int, (s : Int) - w < j → j < s →
-        ∃ S ∈ Φ.tree, A.saved j = some S.root ∧ Φ.Anc X S} = some B
-
-private theorem FromP.of_onTick
-    {L : Set Lock} (hU : Coherent U) (hΦ : FrameOK Φ) (hΦU : Φ.tree ⊆ U)
-    (x : Fin sp.n) (A : ACState sp.n) (t : Time)
-    (hL : UnlockRel sp A.locks Φ t ((sp.slot t : Int) - 1) (mergedVoteView sp A Φ (sp.slot t)) L) :
-    FromP U A.locks (acOnTickWithM sp wm x L A Φ t).1.locks
-      (fun s f B => f = true ∨
-        (t = sp.ts (sp.slot t) + 2 * sp.Δ ∧ 0 < sp.slot t ∧ joined sp A t ∧
-          s = sp.slot t - 1 ∧
-          (f = false → ∃ D, SlowW wm.width A Φ t s D ∧ B = Φ.viableAncestor D))) := by
-  unfold acOnTickWithM
-  dsimp only
-  split_ifs with hj ht hu hu
-  · exfalso
-    have := sp.toParams.hΔ
-    linarith [ht.1.symm.trans hu]
-  · refine (FromP.of_updateConfirmation hU hΦ hΦU A t _).mono fun s f B h => ?_
-    obtain ⟨D, _, hB, rfl, _, _, hslow⟩ := h
-    exact Or.inr ⟨ht.1, ht.2, hj, rfl, fun hf => ⟨D, hslow hf, hB⟩⟩
-  · exact (FromP.of_tryVote (wm := wm) hU hΦ hΦU x A t hL).mono fun s f B h => Or.inl h
-  · exact FromP.of_eq rfl
-  · exact FromP.of_eq rfl
+variable {U : Set (Blk sp.n FGP)}
 
 variable {H : Set (Fin sp.n)} {tr : GTrace sp FGP}
 
@@ -142,9 +58,10 @@ private theorem call_fromPU
   cases hcall : ℓ.call with
   | tick =>
     rw [hcall] at hlaw
-    refine (FromP.of_onTick (L := u i) hU hΦ hΦU x A _ hlaw).mono fun s f B h hf => ?_
-    rcases h with h | ⟨ht, hs0, hj, hs, hW⟩
-    · exact fast s f B h hf
+    refine (FromP.of_onTick (wm := wm) (L := u i) hU hΦ hΦU x A _ hlaw).mono
+      fun s f B h hf => ?_
+    obtain ⟨D, -, rfl, ⟨-, -, h, -⟩ | ⟨ht, hs0, hj, hs, -, -, hW⟩⟩ := h
+    · exact fast s f _ h hf
     · have hu : UpdateAt tr x i s ℓ := by
         refine ⟨hc, hcall, ?_, hA ▸ hj⟩
         rw [hs]
@@ -152,23 +69,24 @@ private theorem call_fromPU
         simp only [ACParams.ts]
         push_cast [Nat.cast_sub hs0]
         ring
-      obtain ⟨D, ⟨C, h1, h2⟩, rfl⟩ := hW hf
+      obtain ⟨C, h1, h2⟩ := hW hf
       exact ⟨D, slowLockAtW_iff.2 ⟨ℓ, C, hu, hA ▸ h1, hA ▸ h2⟩, rfl⟩
   | proposal => exact FromP.of_eq rfl
   | toFG => exact FromP.of_eq (toFG_locks A _)
   | message m =>
     rw [hcall] at hlaw
-    have h₁ := FromP.of_optimistic hU hΦ hΦU (admitVote sp A (tr.time i) m) (tr.time i)
-    rw [admitVote_locks_eq] at h₁
-    exact (FromP.trans hU h₁ (FromP.of_tryVote (wm := wm) (L := u i) hU hΦ hΦU x _ _ hlaw)).mono
-      fun s f B h hf => fast s f B h hf
+    have h₁ := FromP.of_optimistic_admit hU hΦ hΦU A rfl (tr.time i) m
+    exact (FromP.trans hU (h₁.mono fun _ _ _ ⟨_, _, _, h, _⟩ => h)
+      ((FromP.of_tryVote (wm := wm) (L := u i) hU hΦ hΦU x _ _ hlaw).mono
+        fun _ _ _ ⟨_, _, _, _, _, h, _⟩ => h)).mono fun s f B h hf => fast s f B h hf
   | block B =>
     rw [hcall] at hlaw
     have h₁ := FromP.of_optimistic hU hΦ hΦU (blockReceipt sp A (tr.time i) B)
         (tr.time i)
     rw [blockReceipt_locks] at h₁
-    exact (FromP.trans hU h₁ (FromP.of_tryVote (wm := wm) (L := u i) hU hΦ hΦU x _ _ hlaw)).mono
-      fun s f B h hf => fast s f B h hf
+    exact (FromP.trans hU (h₁.mono fun _ _ _ ⟨_, _, _, h, _⟩ => h)
+      ((FromP.of_tryVote (wm := wm) (L := u i) hU hΦ hΦU x _ _ hlaw).mono
+        fun _ _ _ ⟨_, _, _, _, _, h, _⟩ => h)).mono fun s f B h hf => fast s f B h hf
   | restart =>
     exact FromP.of_eq ((restart_state sp) FGP x A ℓ.frame (tr.time i) hΦ
       (hr.time_nonneg i)).2.1
