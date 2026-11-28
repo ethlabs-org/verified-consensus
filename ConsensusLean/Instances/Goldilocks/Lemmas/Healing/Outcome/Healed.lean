@@ -7,7 +7,8 @@ public section
 
 /-! # Goldilocks Healing: the record half of the Healed bundle
 
-The vocabulary only. `HealedRecords … h₀ E` collects, for the entries `E h`, C2*⁺ (i) (every honest attestation at a
+The vocabulary only. `HealedRecords … h₀ E` collects, for the entries `E h`, C2*⁺ (i) (every
+honest attestation at a
 height `h ≥ h₀` names `E h`), C2*⁺ (ii) (every honest `Λ.lock[h]` with `h ≥ h₀` is `⊥` or `E h`)
 and R0 (`permits(Λ, h₀, E h₀)` at every cut), with RH (`H_z + 1 ≤ h₀`). The paper derives
 C2*⁺ (i), (ii) and R0 from the clean-height premise CH. -/

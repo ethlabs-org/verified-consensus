@@ -46,7 +46,8 @@ that `y` signs at trace index `k`, so `s := tr.time k`.
   instantiate `s` with its latest signing at or before `t`. A held attestation is not in the
   node's pool, so its own proposals cannot carry it before its release.
 
-At these arguments `released_by_of_release_liveness` gives the simulation interface's release bound: an attestation signed at `k` is released at some `r` with
+At these arguments `released_by_of_release_liveness` gives the simulation interface's release
+bound: an attestation signed at `k` is released at some `r` with
 `tr.time k ≤ r ≤ max (tr.time k) g + R·Δ`. -/
 
 namespace Consensus.Goldilocks.Simulation

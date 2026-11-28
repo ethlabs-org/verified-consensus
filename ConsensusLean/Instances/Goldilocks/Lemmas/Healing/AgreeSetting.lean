@@ -14,7 +14,8 @@ public section
 HS.3 (a), with its settled premise: the facts
 that do not compare walks:
 
-* **The ready proposal is an honest proposal** of the AC projection (`honestProposalRun_of_proposesAt`:
+* **The ready proposal is an honest proposal** of the AC projection
+  (`honestProposalRun_of_proposesAt`:
   the own block is the tick's proposal, accepted at once, C0.3), so HS.2's proposal clause
   applies to it.
 * **The setting** `AgreeSetting`: HS.3 (a)'s premises with the proposal's `ac_proposal` call

@@ -14,7 +14,8 @@ public section
 An honest client record changes only when the node signs
 (`record_attestation`, the only writer; the record is durable over restarts): its target and
 timeout entries at `h` name the height pair of an attestation it signed at `h`, its lock entry at
-`h` the finality pair `(h, ·)` of one (`client_record_origin_of_run`). A signed height pair of height
+`h` the finality pair `(h, ·)` of one (`client_record_origin_of_run`). A signed height pair of
+height
 `≥ H_z + 1` is signed at or after `a` (HR.1 (c)), so by (R1)'s attestations it names the entry at
 its height of a high origin's chain; a finality pair names the entry at its height of an ancestor of
 the source's entry (`signed_fin_pair_entry_of_run`, `chain_pairs_entry`), which is then on a high
