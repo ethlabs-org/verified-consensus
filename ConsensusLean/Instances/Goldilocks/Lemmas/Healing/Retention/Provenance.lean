@@ -128,7 +128,8 @@ theorem stored_fast_lock_provenance (hr : ACLocalRun (goldilocksAC sp FGP) H U t
     rw [Trace.state] at hl
     split_ifs at hl with hnode
     · obtain ⟨ℓ, hℓ⟩ := Option.ne_none_iff_exists'.1 hnode.2
-      rcases call_storedFrom hr hx ⟨hnode.1, hℓ⟩ l hl with ⟨l₀, hl₀, hf₀, hs, hb⟩ | ⟨O, h, hB⟩
+      rcases fromP_iff.1 (call_storedFrom hr hx ⟨hnode.1, hℓ⟩) l hl with
+        ⟨l₀, hl₀, hf₀, hs, hb⟩ | ⟨O, h, hB⟩
       · obtain ⟨r, hri, CV, ℓ', D, hc, hfl, hB⟩ := ih l₀ hl₀ (hf₀.trans hf)
         exact ⟨r, hri.trans (Nat.lt_succ_self i), CV, ℓ', D, hc, hs ▸ hfl,
           AC.below_iff.1 (AC.Below.of_sitsBelow hr.coherent hb (AC.below_iff.2 hB))⟩
